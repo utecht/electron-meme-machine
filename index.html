@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>electron es6 react boilerplate</title>
+    <title>electon meme machine</title>
     <script>
       // install babel hooks in the renderer process
       require('babel-register');
       require('./scripts/main');
+      if (process.env.NODE_ENV !== 'production') {
+          require('electron-react-devtools').install();
+      }
     </script>
   </head>
 
