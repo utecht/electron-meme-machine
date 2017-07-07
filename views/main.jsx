@@ -5,19 +5,26 @@ import FilePicker from './file_picker.jsx';
 const ffmpeg = require('ffmpeg-static');
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const parser = require('subtitles-parser');
 
 export default class Main extends React.Component {
     constructor(props){
         super(props);
         this.setWorkingDirectory = this.setWorkingDirectory.bind(this);
         this.setCurrentFile = this.setCurrentFile.bind(this);
+        this.setSubs = this.setSubs.bind(this);
         this.ffmpeg_it = this.ffmpeg_it.bind(this);
         this.state = {working_directory: '',
                       current_file: '',
                       srt_file: '',
                       ffmpeg_path: ffmpeg.path,
                       ffmpeg_output: '',
-                      ffmpeg_complete: false};
+                      ffmpeg_complete: false,
+                      ss: '',
+                      t: '',
+                      text: '',
+                      subs: []};
     }
 
     setWorkingDirectory(path){
@@ -26,6 +33,13 @@ export default class Main extends React.Component {
 
     setCurrentFile(path){
         this.setState({current_file: path});
+    }
+
+    setSubs(path){
+        var srt = fs.readFileSync(path, 'utf8');
+        console.log(`${srt}`);
+        var data = parser.fromSrt(srt);
+        this.setState({subs: data});
     }
 
     ffmpeg_it(){
@@ -54,6 +68,11 @@ export default class Main extends React.Component {
                         directory={false}
                         text={"Select Video"}
                         setFilePath={this.setCurrentFile}/>
+                    <h5>Current Subs: {this.state.subs_file}</h5>
+                    <FilePicker
+                        directory={false}
+                        text={"Select Subs"}
+                        setFilePath={this.setSubs}/>
                     <button onClick={this.ffmpeg_it}>ffmpeg it</button>
                     <p>ffmpeg is {this.state.ffmpeg_complete ? 'complete' : 'not complete'}</p>
                     <div>
@@ -64,6 +83,16 @@ export default class Main extends React.Component {
                             </video>
                         ) : (<p>video no ready</p>) }
                     </div>
+                    <table>
+                        <tbody>
+                            {this.state.subs.map((x, i) =>
+                                <tr>
+                                    <td>{x.id}</td>
+                                    <td>{x.text}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                     <pre>{this.state.ffmpeg_output}</pre>
                 </div>;
     }
