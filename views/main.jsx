@@ -7,6 +7,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const parser = require('subtitles-parser');
+const {shell} = require('electron');
 
 export default class Main extends React.Component {
     constructor(props){
@@ -15,6 +16,10 @@ export default class Main extends React.Component {
         this.setCurrentFile = this.setCurrentFile.bind(this);
         this.setSubs = this.setSubs.bind(this);
         this.ffmpeg_it = this.ffmpeg_it.bind(this);
+        this.showIt = this.showIt.bind(this);
+        this.setStart = this.setStart.bind(this);
+        this.setEnd = this.setEnd.bind(this);
+        this.setText = this.setText.bind(this);
         this.state = {working_directory: '',
                       current_file: '',
                       srt_file: '',
@@ -22,9 +27,31 @@ export default class Main extends React.Component {
                       ffmpeg_output: '',
                       ffmpeg_complete: false,
                       ss: '',
-                      t: '',
+                      end: '',
                       text: '',
                       subs: []};
+    }
+
+    showIt(){
+        shell.showItemInFolder(this.state.working_directory + '/test.mp4');
+    }
+
+    quickSet(sub){
+        this.setStart(sub.startTime.replace(',', '.'));
+        this.setEnd(sub.endTime.replace(',', '.'));
+        this.setText(sub.text);
+    }
+
+    setStart(time){
+        this.setState({ss: time});
+    }
+
+    setEnd(time){
+        this.setState({end: time});
+    }
+
+    setText(text){
+        this.setState({text: text});
     }
 
     setWorkingDirectory(path){
@@ -37,14 +64,16 @@ export default class Main extends React.Component {
 
     setSubs(path){
         var srt = fs.readFileSync(path, 'utf8');
-        console.log(`${srt}`);
         var data = parser.fromSrt(srt);
         this.setState({subs: data});
     }
 
     ffmpeg_it(){
         this.setState({ffmpeg_output: ''});
-        var proc = spawn(this.state.ffmpeg_path, ['-i', this.state.current_file,
+        var proc = spawn(this.state.ffmpeg_path, [
+                                       '-ss', this.state.ss,
+                                       '-i', this.state.current_file,
+                                       '-to', this.state.end,
                                        '-y',
                                        this.state.working_directory + '/test.mp4']);
         proc.stderr.on('data', (data) => {
@@ -68,12 +97,12 @@ export default class Main extends React.Component {
                         directory={false}
                         text={"Select Video"}
                         setFilePath={this.setCurrentFile}/>
-                    <h5>Current Subs: {this.state.subs_file}</h5>
                     <FilePicker
                         directory={false}
                         text={"Select Subs"}
                         setFilePath={this.setSubs}/>
                     <button onClick={this.ffmpeg_it}>ffmpeg it</button>
+                    <button onClick={this.showIt}>show it</button>
                     <p>ffmpeg is {this.state.ffmpeg_complete ? 'complete' : 'not complete'}</p>
                     <div>
                         { this.state.ffmpeg_complete ?(
@@ -81,14 +110,15 @@ export default class Main extends React.Component {
                                 <source src={this.state.working_directory + '/test.mp4'}/>
                                 no video?
                             </video>
-                        ) : (<p>video no ready</p>) }
+                        ) : (<p>video not ready</p>) }
                     </div>
                     <table>
                         <tbody>
                             {this.state.subs.map((x, i) =>
-                                <tr>
+                                <tr key={x.id}>
                                     <td>{x.id}</td>
                                     <td>{x.text}</td>
+                                    <td><button onClick={() => this.quickSet(x)}>Set</button></td>
                                 </tr>
                             )}
                         </tbody>
