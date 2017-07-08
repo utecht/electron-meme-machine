@@ -11,11 +11,13 @@ export default class FilePicker extends React.Component {
 
     setFilePath(){
         if(this.props.directory){
-            var working_path = dialog.showOpenDialog({properties: ['openDirectory', 'createDirectory']})[0];
+            var diag = dialog.showOpenDialog({properties: ['openDirectory', 'createDirectory']});
         } else {
-            var working_path = dialog.showOpenDialog()[0];
+            var diag = dialog.showOpenDialog();
         }
-        this.props.setFilePath(working_path);
+        if(diag !== undefined){
+          this.props.setFilePath(diag[0]);
+        }
     }
 
     render() {

@@ -1,6 +1,6 @@
 {
   "name": "electron-meme-machine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "main.js",
   "license": "MIT",
   "repository": "https://github.com/utecht/electron-meme-machine.git",
@@ -12,12 +12,15 @@
     "babel-preset-react": "^6.3.13",
     "babel-register": "^6.3.13",
     "ffmpeg-static": "^2.0.0",
+    "font-manager": "^0.2.2",
+    "opensubtitles-api": "^4.0.0",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
     "subtitles-parser": "0.0.2"
   },
   "devDependencies": {
     "electron": "^1.4.3",
-    "electron-react-devtools": "^0.4.0"
+    "electron-react-devtools": "^0.4.0",
+    "electron-rebuild": "^1.5.11"
   }
 }
