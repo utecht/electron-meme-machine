@@ -2,6 +2,7 @@
 
 import React from 'react';
 import FilePicker from './file_picker.jsx';
+import { toMS, toFFMPEGTime } from '../scripts/time.js';
 const { remote } = require('electron');
 const ffmpeg = require('ffmpeg-static');
 const path = require('path');
@@ -37,14 +38,16 @@ export default class Main extends React.Component {
           this.token = res.token;
         })
         */
+
+        // Prevent drag-on from just displaying file
         document.ondragover = document.ondrop = (ev) => {
           ev.preventDefault()
         }
-
         document.body.ondrop = (ev) => {
           this.setCurrentFile(ev.dataTransfer.files[0].path);
           ev.preventDefault()
         }
+
         var font = fontManager.findFontSync({family: 'Impact'});
         this.state = {working_directory: this.initializeWorking(),
                       current_file: '',
@@ -83,59 +86,6 @@ export default class Main extends React.Component {
         this.setState({ss: time});
     }
 
-    toMS(srtTime) {
-        var match = srtTime.match(/^(\d{2}):(\d{2}):(\d{2}),(\d{3})$/);
-
-        if (!match) {
-          throw new Error('Invalid SRT time format');
-        }
-
-        var hours = parseInt(match[1], 10);
-        var minutes = parseInt(match[2], 10);
-        var seconds = parseInt(match[3], 10);
-        var milliseconds = parseInt(match[4], 10);
-
-        hours *= 3600000;
-        minutes *= 60000;
-        seconds *= 1000;
-
-        return hours + minutes + seconds + milliseconds;
-    }
-
-    toFFMPEGTime(milliseconds) {
-      if (!/^\d+$/.test(milliseconds.toString())) {
-        throw new Error('Time should be an Integer value in milliseconds');
-      }
-
-      milliseconds = parseInt(milliseconds);
-
-      var date = new Date(0, 0, 0, 0, 0, 0, milliseconds);
-
-      var hours = date.getHours() < 10
-        ? '0' + date.getHours()
-        : date.getHours();
-
-      var minutes = date.getMinutes() < 10
-        ? '0' + date.getMinutes()
-        : date.getMinutes();
-
-      var seconds = date.getSeconds() < 10
-        ? '0' + date.getSeconds()
-        : date.getSeconds();
-
-      var ms = milliseconds - ((hours * 3600000) + (minutes * 60000) + (seconds * 1000));
-
-      if (ms < 100 && ms >= 10) {
-        ms = '0' + ms;
-      } else if (ms < 10) {
-        ms = '00' + ms;
-      }
-
-      var srtTime = hours + ':' + minutes + ':' + seconds + '.' + ms;
-
-      return srtTime;
-    }
-
     clearState(){
       this.setState({ss: '', t: '', text: '',
                      current_file: '', ffmpeg_output: '',
@@ -144,14 +94,12 @@ export default class Main extends React.Component {
     }
 
     setDuration(start, end){
-        var duration = this.toMS(end) - this.toMS(start);
-        this.setState({t: this.toFFMPEGTime(duration)});
+        var duration = toMS(end) - toMS(start);
+        this.setState({t: toFFMPEGTime(duration)});
     }
 
     setText(text){
-        var cleaned_text = text.replace(/<[^>]*>/g, '');
-        cleaned_text = cleaned_text.replace('– ', '');
-        this.setState({text: cleaned_text});
+        this.setState({text: text});
     }
 
     setWorkingDirectory(path){
@@ -197,9 +145,18 @@ export default class Main extends React.Component {
       });
     }
 
+    cleanText(text){
+        var cleaned_text = text.replace(/<[^>]*>/g, '');
+        cleaned_text = cleaned_text.replace('– ', '');
+        return cleaned_text;
+    }
+
     setSubs(path){
         var srt = fs.readFileSync(path, 'utf8');
         var data = parser.fromSrt(srt);
+        for(let sub of data){
+          sub.text = this.cleanText(sub.text);
+        }
         this.setState({subs: data});
     }
 
@@ -249,67 +206,68 @@ export default class Main extends React.Component {
 
     render() {
         return <div>
-                    <FilePicker
-                        directory={true}
-                        text={"Change Working Directory"}
-                        setFilePath={this.setWorkingDirectory}/>
-                    <span>Current working directory: {this.state.working_directory}</span>
-                    { this.state.current_file === '' ?(
-                      <div>
-                        <FilePicker
-                            directory={false}
-                            text={"Select Video"}
-                            setFilePath={this.setCurrentFile}/>
-                        <span>or drop video file onto window</span>
-                      </div>
-                    ) : (
-                      <div>
-                        <h5>Current File: {this.state.current_file}</h5>
-                        <button onClick={this.extract_subs}>Extract Subs</button>
-                      </div>
-                    )}
-                    <FilePicker
-                        directory={false}
-                        text={"Select SRT file"}
-                        setFilePath={this.setSubs}/>
-                    <label>-ss</label><input name="ss" value={this.state.ss} onChange={this.handleChange}></input>
-                    <label>-t</label><input name="t" value={this.state.t} onChange={this.handleChange}></input>
-                    <br/>
-                    <label>text</label><textarea name="text" value={this.state.text} onChange={this.handleChange}></textarea>
-                    <br/>
-                    <select name="format" value={this.state.format} onChange={this.handleChange}>
-                      <option value="mp4">mp4</option>
-                      <option value="gif">gif</option>
-                    </select>
-                    <button onClick={this.ffmpeg_it}>ffmpeg it</button>
-                    <button onClick={this.showIt}>show file in system browser</button>
-                    <button onClick={this.clearState}>clear all</button>
-                    <div>
-                        { this.state.show_video ? (
-                            <div>
-                              { this.state.format === 'mp4' ? (
-                                <video controls>
-                                    <source src={this.state.working_directory + 'test.' + this.state.format}/>
-                                    no video?
-                                </video>
-                              ):(
-                                <img src={this.state.working_directory + 'test.' + this.state.format}/>
-                              )}
-                            </div>
-                        ) : (<p>video not ready</p>) }
-                    </div>
-                    <table>
-                        <tbody>
-                            {this.state.subs.map((x, i) =>
-                                <tr key={x.id}>
-                                    <td>{x.id}</td>
-                                    <td>{x.text}</td>
-                                    <td><button onClick={() => this.quickSet(x)}>Set</button></td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                    <pre>{this.state.ffmpeg_output}</pre>
-                </div>;
+        <FilePicker
+            directory={true}
+            text={"Change Working Directory"}
+            setFilePath={this.setWorkingDirectory}/>
+        <span>Current working directory: {this.state.working_directory}</span>
+        { this.state.current_file === '' ?(
+          <div>
+            <FilePicker
+                directory={false}
+                text={"Select Video"}
+                setFilePath={this.setCurrentFile}/>
+            <span>or drop video file onto window</span>
+          </div>
+        ) : (
+          <div>
+            <h5>Current File: {this.state.current_file}</h5>
+            <button onClick={this.extract_subs}>Extract Subs</button>
+          </div>
+        )}
+        <FilePicker
+            directory={false}
+            text={"Select SRT file"}
+            setFilePath={this.setSubs}/>
+        <label>-ss</label><input name="ss" value={this.state.ss} onChange={this.handleChange}></input>
+        <label>-t</label><input name="t" value={this.state.t} onChange={this.handleChange}></input>
+        <br/>
+        <label>text</label><textarea name="text" value={this.state.text} onChange={this.handleChange}></textarea>
+        <br/>
+        <select name="format" value={this.state.format} onChange={this.handleChange}>
+          <option value="mp4">mp4</option>
+          <option value="gif">gif</option>
+        </select>
+        <button onClick={this.ffmpeg_it}>ffmpeg it</button>
+        <button onClick={this.showIt}>show file in system browser</button>
+        <button onClick={this.clearState}>clear all</button>
+        <div>
+            { this.state.show_video ? (
+                <div>
+                  { this.state.format === 'mp4' ? (
+                    <video controls>
+                        <source src={this.state.working_directory + 'test.' + this.state.format}/>
+                        no video?
+                    </video>
+                  ):(
+                    <img src={this.state.working_directory + 'test.' + this.state.format}/>
+                  )}
+                </div>
+            ) : (<p>video not ready</p>) }
+        </div>
+        <table>
+            <tbody>
+                {this.state.subs.map((x, i) =>
+                    <tr key={x.id}>
+                        <td>{x.id}</td>
+                        <td>{x.text}</td>
+                        <td>{x.startTime} --> {x.endTime}</td>
+                        <td><button onClick={() => this.quickSet(x)}>Set</button></td>
+                    </tr>
+                )}
+            </tbody>
+        </table>
+        <pre>{this.state.ffmpeg_output}</pre>
+    </div>;
     }
 }
