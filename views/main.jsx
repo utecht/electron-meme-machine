@@ -24,6 +24,8 @@ export default class Main extends React.Component {
         this.setStart = this.setStart.bind(this);
         this.setDuration = this.setDuration.bind(this);
         this.setText = this.setText.bind(this);
+        this.clearState = this.clearState.bind(this);
+        this.handleChange = this.handleChange.bind(this);
         /*
         this.OpenSubtitles = new opensubs({
           useragent: 'OSTestUserAgentTemp',
@@ -35,6 +37,14 @@ export default class Main extends React.Component {
           this.token = res.token;
         })
         */
+        document.ondragover = document.ondrop = (ev) => {
+          ev.preventDefault()
+        }
+
+        document.body.ondrop = (ev) => {
+          this.setCurrentFile(ev.dataTransfer.files[0].path);
+          ev.preventDefault()
+        }
         var font = fontManager.findFontSync({family: 'Impact'});
         this.state = {working_directory: this.initializeWorking(),
                       current_file: '',
@@ -46,6 +56,7 @@ export default class Main extends React.Component {
                       ss: '',
                       t: '',
                       text: '',
+                      format: 'mp4',
                       subs: []};
         this.initializeWorking();
     }
@@ -59,7 +70,7 @@ export default class Main extends React.Component {
     }
 
     showIt(){
-        shell.showItemInFolder(this.state.working_directory + '/test.mp4');
+        shell.showItemInFolder(this.state.working_directory + 'test.' + this.state.format);
     }
 
     quickSet(sub){
@@ -125,6 +136,12 @@ export default class Main extends React.Component {
       return srtTime;
     }
 
+    clearState(){
+      this.setState({ss: '', t: '', text: '',
+                     current_file: '', ffmpeg_output: '',
+                     subs: [], srt_file: '',
+                     show_video: false})
+    }
 
     setDuration(start, end){
         var duration = this.toMS(end) - this.toMS(start);
@@ -139,6 +156,11 @@ export default class Main extends React.Component {
 
     setWorkingDirectory(path){
         this.setState({working_directory: path});
+    }
+
+    handleChange(event) {
+      const name = event.target.name;
+      this.setState({[name]: event.target.value});
     }
 
     setCurrentFile(path){
@@ -212,15 +234,13 @@ export default class Main extends React.Component {
                     ':fontcolor=white:fontsize=' + font_size +
                     ':x=(w-text_w)/2:y=((h*1.75)-text_h)/2:borderw=3');
         }
-        args.push(this.state.working_directory + 'test.mp4');
-        console.log(args)
+        args.push(this.state.working_directory + 'test.' + this.state.format);
         var proc = spawn(this.state.ffmpeg_path, args);
         proc.stderr.on('data', (data) => {
             this.setState({ffmpeg_output:
               this.state.ffmpeg_output + `${data}`});
         });
         proc.on('close', (code) => {
-            console.log(code);
             if(code === 0){
               this.setState({show_video: true});
             }
@@ -229,30 +249,53 @@ export default class Main extends React.Component {
 
     render() {
         return <div>
-                    <p>{this.state.ffmpeg_path}</p>
-                    <h5>Working Path: {this.state.working_directory}</h5>
                     <FilePicker
                         directory={true}
-                        text={"Set Working Directory"}
+                        text={"Change Working Directory"}
                         setFilePath={this.setWorkingDirectory}/>
-                    <h5>Current File: {this.state.current_file}</h5>
+                    <span>Current working directory: {this.state.working_directory}</span>
+                    { this.state.current_file === '' ?(
+                      <div>
+                        <FilePicker
+                            directory={false}
+                            text={"Select Video"}
+                            setFilePath={this.setCurrentFile}/>
+                        <span>or drop video file onto window</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <h5>Current File: {this.state.current_file}</h5>
+                        <button onClick={this.extract_subs}>Extract Subs</button>
+                      </div>
+                    )}
                     <FilePicker
                         directory={false}
-                        text={"Select Video"}
-                        setFilePath={this.setCurrentFile}/>
-                    <button onClick={this.extract_subs}>Extract Subs</button>
-                    <FilePicker
-                        directory={false}
-                        text={"Select Subs"}
+                        text={"Select SRT file"}
                         setFilePath={this.setSubs}/>
+                    <label>-ss</label><input name="ss" value={this.state.ss} onChange={this.handleChange}></input>
+                    <label>-t</label><input name="t" value={this.state.t} onChange={this.handleChange}></input>
+                    <br/>
+                    <label>text</label><textarea name="text" value={this.state.text} onChange={this.handleChange}></textarea>
+                    <br/>
+                    <select name="format" value={this.state.format} onChange={this.handleChange}>
+                      <option value="mp4">mp4</option>
+                      <option value="gif">gif</option>
+                    </select>
                     <button onClick={this.ffmpeg_it}>ffmpeg it</button>
-                    <button onClick={this.showIt}>show it</button>
+                    <button onClick={this.showIt}>show file in system browser</button>
+                    <button onClick={this.clearState}>clear all</button>
                     <div>
-                        { this.state.show_video ?(
-                            <video controls>
-                                <source src={this.state.working_directory + 'test.mp4'}/>
-                                no video?
-                            </video>
+                        { this.state.show_video ? (
+                            <div>
+                              { this.state.format === 'mp4' ? (
+                                <video controls>
+                                    <source src={this.state.working_directory + 'test.' + this.state.format}/>
+                                    no video?
+                                </video>
+                              ):(
+                                <img src={this.state.working_directory + 'test.' + this.state.format}/>
+                              )}
+                            </div>
                         ) : (<p>video not ready</p>) }
                     </div>
                     <table>
