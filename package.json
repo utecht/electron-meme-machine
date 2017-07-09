@@ -1,16 +1,19 @@
 {
   "name": "electron-meme-machine",
   "version": "0.2.0",
-  "main": "main.js",
+  "main": "src/main.js",
   "license": "MIT",
   "repository": "https://github.com/utecht/electron-meme-machine.git",
   "scripts": {
-    "start": "electron -r babel-register ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "dependencies": {
     "babel-preset-es2015": "^6.3.13",
-    "babel-preset-react": "^6.3.13",
+    "babel-preset-react": "^6.24.1",
     "babel-register": "^6.3.13",
+    "electron-compile": "^6.4.1",
     "ffmpeg-static": "^2.0.0",
     "font-manager": "^0.2.2",
     "opensubtitles-api": "^4.0.0",
@@ -19,8 +22,39 @@
     "subtitles-parser": "0.0.2"
   },
   "devDependencies": {
-    "electron": "^1.4.3",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-preset-env": "^1.6.0",
+    "electron-prebuilt-compile": "1.6.11",
     "electron-react-devtools": "^0.4.0",
     "electron-rebuild": "^1.5.11"
+  },
+  "config": {
+    "forge": {
+      "make_targets": {
+        "win32": [
+          "squirrel"
+        ],
+        "darwin": [
+          "zip"
+        ],
+        "linux": [
+          "deb",
+          "rpm"
+        ]
+      },
+      "electronPackagerConfig": {},
+      "electronWinstallerConfig": {
+        "name": ""
+      },
+      "electronInstallerDebian": {},
+      "electronInstallerRedhat": {},
+      "github_repository": {
+        "owner": "",
+        "name": ""
+      },
+      "windowsStoreConfig": {
+        "packageName": ""
+      }
+    }
   }
 }
