@@ -12,6 +12,7 @@ const parser = require('subtitles-parser');
 const {shell} = require('electron');
 const opensubs = require('opensubtitles-api');
 const fontManager = require('font-manager');
+const os = require('os');
 
 export default class Main extends React.Component {
     constructor(props){
@@ -65,7 +66,7 @@ export default class Main extends React.Component {
     }
 
     initializeWorking(){
-      var tmp = remote.app.getPath('temp');
+      var tmp = path.join(remote.app.getPath('temp'), 'emm') + path.sep;
       if(fs.existsSync(tmp) != true){
         fs.mkdirSync(tmp);
       }
@@ -186,10 +187,15 @@ export default class Main extends React.Component {
           }
           fs.writeFileSync(text_path, this.state.text);
           args.push('-vf');
-          args.push('drawtext=fontfile=' + this.state.font_path +
+          var drawtext_arg = 'drawtext=fontfile=' + this.state.font_path +
                     ':textfile=' + text_path +
                     ':fontcolor=white:fontsize=' + font_size +
-                    ':x=(w-text_w)/2:y=((h*1.75)-text_h)/2:borderw=3');
+                    ':x=(w-text_w)/2:y=((h*1.75)-text_h)/2:borderw=3';
+          if(os.platform() === 'win32'){
+            drawtext_arg = drawtext_arg.replace(/C:/g, '');
+            drawtext_arg = drawtext_arg.replace(/\\/g, '/');
+          }
+          args.push(drawtext_arg);
         }
         args.push(this.state.working_directory + 'test.' + this.state.format);
         var proc = spawn(this.state.ffmpeg_path, args);

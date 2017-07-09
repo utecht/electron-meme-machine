@@ -1,5 +1,7 @@
 {
   "name": "electron-meme-machine",
+  "author": "Joseph Utecht",
+  "description": "The electron meme machine",
   "version": "0.2.0",
   "main": "src/main.js",
   "license": "MIT",
