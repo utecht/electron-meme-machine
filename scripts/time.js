@@ -1,6 +1,11 @@
+export function calcDuration(start, end){
+    var startMS = toMS(start);
+    var endMS = toMS(end);
+    return toFFMPEGTime(endMS - startMS);
+}
 
 export function toMS(srtTime) {
-    var match = srtTime.match(/^(\d{2}):(\d{2}):(\d{2}),(\d{3})$/);
+    var match = srtTime.match(/^(\d{2}):(\d{2}):(\d{2}).(\d{3})$/);
 
     if (!match) {
       throw new Error('Invalid SRT time format');

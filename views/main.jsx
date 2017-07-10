@@ -2,7 +2,7 @@
 
 import React from 'react';
 import FilePicker from './file_picker.jsx';
-import { toMS, toFFMPEGTime } from '../scripts/time.js';
+import { toMS, toFFMPEGTime, calcDuration } from '../scripts/time.js';
 const { remote } = require('electron');
 const ffmpeg = require('ffmpeg-static');
 const path = require('path');
@@ -24,7 +24,7 @@ export default class Main extends React.Component {
         this.ffmpeg_it = this.ffmpeg_it.bind(this);
         this.showIt = this.showIt.bind(this);
         this.setStart = this.setStart.bind(this);
-        this.setDuration = this.setDuration.bind(this);
+        this.setEnd = this.setEnd.bind(this);
         this.setText = this.setText.bind(this);
         this.clearState = this.clearState.bind(this);
         this.handleChange = this.handleChange.bind(this);
@@ -57,8 +57,8 @@ export default class Main extends React.Component {
                       ffmpeg_output: '',
                       font_path: font.path,
                       show_video: false,
-                      ss: '',
-                      t: '',
+                      start: '',
+                      end: '',
                       text: '',
                       format: 'mp4',
                       subs: []};
@@ -79,24 +79,23 @@ export default class Main extends React.Component {
 
     quickSet(sub){
         this.setStart(sub.startTime.replace(',', '.'));
-        this.setDuration(sub.startTime, sub.endTime);
+        this.setEnd(sub.endTime.replace(',', '.'));
         this.setText(sub.text);
     }
 
     setStart(time){
-        this.setState({ss: time});
+        this.setState({start: time});
     }
 
     clearState(){
-      this.setState({ss: '', t: '', text: '',
+      this.setState({start: '', end: '', text: '',
                      current_file: '', ffmpeg_output: '',
                      subs: [], srt_file: '',
                      show_video: false})
     }
 
-    setDuration(start, end){
-        var duration = toMS(end) - toMS(start);
-        this.setState({t: toFFMPEGTime(duration)});
+    setEnd(end){
+        this.setState({end: end});
     }
 
     setText(text){
@@ -164,13 +163,13 @@ export default class Main extends React.Component {
     ffmpeg_it(){
         this.setState({ffmpeg_output: '', show_video: false});
         var args = [];
-        if(this.state.ss !== ''){
+        if(this.state.start !== ''){
           args.push('-ss');
-          args.push(this.state.ss);
+          args.push(this.state.start);
         }
-        if(this.state.t !== ''){
+        if(this.state.end !== ''){
           args.push('-t');
-          args.push(this.state.t);
+          args.push(calcDuration(this.state.start, this.state.end));
         }
         args.push('-i');
         args.push(this.state.current_file);
@@ -235,8 +234,8 @@ export default class Main extends React.Component {
             directory={false}
             text={"Select SRT file"}
             setFilePath={this.setSubs}/>
-        <label>-ss</label><input name="ss" value={this.state.ss} onChange={this.handleChange}></input>
-        <label>-t</label><input name="t" value={this.state.t} onChange={this.handleChange}></input>
+        <label>start</label><input name="start" value={this.state.start} onChange={this.handleChange}></input>
+        <label>end</label><input name="end" value={this.state.end} onChange={this.handleChange}></input>
         <br/>
         <label>text</label><textarea name="text" value={this.state.text} onChange={this.handleChange}></textarea>
         <br/>
