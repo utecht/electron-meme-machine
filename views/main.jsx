@@ -2,6 +2,7 @@
 
 import React from 'react';
 import FilePicker from './file_picker.jsx';
+import LineTable from './line_table.jsx';
 import { toMS, toFFMPEGTime, calcDuration } from '../scripts/time.js';
 const { remote } = require('electron');
 const ffmpeg = require('ffmpeg-static');
@@ -78,13 +79,17 @@ export default class Main extends React.Component {
     }
 
     quickSet(sub){
-        this.setStart(sub.startTime.replace(',', '.'));
-        this.setEnd(sub.endTime.replace(',', '.'));
+        this.setStart(sub.startTime);
+        this.setEnd(sub.endTime);
         this.setText(sub.text);
     }
 
     setStart(time){
-        this.setState({start: time});
+        this.setState({start: time.replace(',', '.')});
+    }
+
+    setEnd(end){
+        this.setState({end: end.replace(',', '.')});
     }
 
     clearState(){
@@ -92,10 +97,6 @@ export default class Main extends React.Component {
                      current_file: '', ffmpeg_output: '',
                      subs: [], srt_file: '',
                      show_video: false})
-    }
-
-    setEnd(end){
-        this.setState({end: end});
     }
 
     setText(text){
@@ -260,18 +261,12 @@ export default class Main extends React.Component {
                 </div>
             ) : (<p>video not ready</p>) }
         </div>
-        <table>
-            <tbody>
-                {this.state.subs.map((x, i) =>
-                    <tr key={x.id}>
-                        <td>{x.id}</td>
-                        <td>{x.text}</td>
-                        <td>{x.startTime} --> {x.endTime}</td>
-                        <td><button onClick={() => this.quickSet(x)}>Set</button></td>
-                    </tr>
-                )}
-            </tbody>
-        </table>
+        <LineTable
+            subs={this.state.subs}
+            setStart={this.setStart}
+            setEnd={this.setEnd}
+            setText={this.setText}
+            quickSet={this.quickSet}/>
         <pre>{this.state.ffmpeg_output}</pre>
     </div>;
     }
